@@ -60,17 +60,21 @@ jobs:
             --name "$AZURE_WEBAPP_NAME" \
             --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false WEBSITE_RUN_FROM_PACKAGE=0
 
-      - name: 'Deploy to Azure WebApp (zip package)'
+      - name: 'Deploy to Azure WebApp (static package)'
         run: |
           if [ -d "./dist" ]; then
-            (cd dist && zip -r ../dist.zip .)
+            ls -la dist | head -n 50
           else
             echo "dist directory missing" >&2
             exit 1
           fi
-          unzip -l dist.zip | head -n 40
-          az webapp deploy --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_WEBAPP_NAME" --src-path dist.zip --type zip --clean true
+          az webapp deploy --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_WEBAPP_NAME" --src-path dist --type static --clean true
           az webapp restart --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_WEBAPP_NAME"
+
+      - name: 'Dump deployment logs on failure'
+        if: failure()
+        run: |
+          az webapp log deployment list --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_WEBAPP_NAME" -o table || true
 
       - name: 'Validate live site content'
         run: |

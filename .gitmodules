@@ -1,0 +1,3 @@
+[submodule "third_party/uvdesk"]
+	path = third_party/uvdesk
+	url = https://github.com/uvdesk/community-skeleton.git

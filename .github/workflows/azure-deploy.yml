@@ -33,7 +33,7 @@ jobs:
         run: |
           az extension add --name webapp --yes || true
           if [ -d "./dist" ]; then
-            zip -r dist.zip dist
+            (cd dist && zip -r ../dist.zip .)
           else
             echo "dist directory missing" >&2
             exit 1

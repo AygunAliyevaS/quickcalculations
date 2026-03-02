@@ -31,8 +31,11 @@ jobs:
 
       - name: 'Deploy to Azure WebApp (az cli)'
         run: |
-          # Ensure the Azure CLI extension for webapp is available
           az extension add --name webapp --yes || true
-          # zip-deploy the build output directory produced by the build step
-          # adjust `--src-path` if your built artifacts are in a different folder
-          az webapp deploy --resource-group matrix --name quickcalculations --src-path ./dist --type zip
+          if [ -d "./dist" ]; then
+            zip -r dist.zip dist
+          else
+            echo "dist directory missing" >&2
+            exit 1
+          fi
+          az webapp deploy --resource-group matrix --name quickcalculations --src-path ./dist.zip --type zip

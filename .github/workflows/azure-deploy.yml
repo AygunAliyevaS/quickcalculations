@@ -1,14 +1,32 @@
-name: Deploy to Azure Web App
+name: Deploy Frontend to Azure Web App
 
 on:
   push:
     branches:
       - main
+    paths:
+      - "src/**"
+      - "public/**"
+      - "index.html"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.ts"
+      - "tailwind.config.ts"
+      - "postcss.config.js"
+      - ".github/workflows/azure-deploy.yml"
   workflow_dispatch:
+
+concurrency:
+  group: deploy-quickcalculations
+  cancel-in-progress: true
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      AZURE_RESOURCE_GROUP: matrix
+      AZURE_WEBAPP_NAME: quickcalculations
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -16,7 +34,8 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: "22"
+          cache: "npm"
 
       - name: Install dependencies
         run: npm ci
@@ -29,13 +48,47 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: 'Deploy to Azure WebApp (az cli)'
+      - name: 'Verify deployment target'
         run: |
-          az extension add --name webapp --yes || true
+          az account show --query "{subscriptionId:id,tenantId:tenantId,user:user.name}" -o json
+          az webapp show --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_WEBAPP_NAME" --query "{name:name,defaultHostName:defaultHostName,state:state,kind:kind}" -o json
+      
+      - name: 'Force static deploy settings'
+        run: |
+          az webapp config appsettings set \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --name "$AZURE_WEBAPP_NAME" \
+            --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false WEBSITE_RUN_FROM_PACKAGE=0
+
+      - name: 'Deploy to Azure WebApp (zip deploy)'
+        run: |
           if [ -d "./dist" ]; then
             (cd dist && zip -r ../dist.zip .)
           else
             echo "dist directory missing" >&2
             exit 1
           fi
-          az webapp deploy --resource-group matrix --name quickcalculations --src-path ./dist.zip --type zip
+          unzip -l dist.zip | head -n 40
+          az webapp deployment source config-zip --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_WEBAPP_NAME" --src dist.zip
+          az webapp restart --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_WEBAPP_NAME"
+
+      - name: 'Validate live site content'
+        run: |
+          set -e
+          URL="https://${AZURE_WEBAPP_NAME}.azurewebsites.net/"
+          for i in $(seq 1 15); do
+            BODY="$(curl -fsSL "$URL" || true)"
+            if echo "$BODY" | grep -qi "Your web app is live, but we don.t have your content yet"; then
+              echo "Attempt $i: placeholder page still present; retrying..."
+              sleep 10
+              continue
+            fi
+            if echo "$BODY" | grep -qi "<!doctype html"; then
+              echo "Deployed content detected."
+              exit 0
+            fi
+            echo "Attempt $i: unexpected content, retrying..."
+            sleep 10
+          done
+          echo "Site still serving placeholder or unexpected content after deploy."
+          exit 1

@@ -25,3 +25,6 @@ dist-ssr
 
 # Service principal SDK auth file (do not commit)
 server/sp.json
+azure-sp.json
+publishProfile.json
+publishprofile.xml

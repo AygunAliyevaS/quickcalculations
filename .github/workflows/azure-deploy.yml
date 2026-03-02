@@ -60,15 +60,16 @@ jobs:
             --name "$AZURE_WEBAPP_NAME" \
             --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false WEBSITE_RUN_FROM_PACKAGE=0
 
-      - name: 'Deploy to Azure WebApp (static package)'
+      - name: 'Deploy to Azure WebApp (zip package)'
         run: |
           if [ -d "./dist" ]; then
-            ls -la dist | head -n 50
+            (cd dist && zip -r ../dist.zip .)
           else
             echo "dist directory missing" >&2
             exit 1
           fi
-          az webapp deploy --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_WEBAPP_NAME" --src-path dist --type static --clean true
+          unzip -l dist.zip | head -n 40
+          az webapp deploy --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_WEBAPP_NAME" --src-path "$PWD/dist.zip" --type zip --clean true
           az webapp restart --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_WEBAPP_NAME"
 
       - name: 'Dump deployment logs on failure'

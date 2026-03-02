@@ -28,21 +28,44 @@ app.post('/api/support', async (req, res) => {
   // If UVDesk config provided, forward request
   const uvdeskUrl = process.env.UV_DESK_API_URL; // full endpoint, e.g. https://help.example.com/api/tickets.json
   const uvdeskToken = process.env.UV_DESK_API_TOKEN;
+  const uvdeskProvider = (process.env.UV_DESK_PROVIDER || '').toLowerCase();
 
   if (uvdeskUrl && uvdeskToken) {
     try {
-      // Forward payload. The exact shape depends on your UVDesk setup.
-      // We send a simple JSON payload and let the configured UVDesk endpoint map fields as needed.
-      const resp = await axios.post(uvdeskUrl, {
-        email,
-        subject,
-        message,
-        source: 'matrixaccel_pro'
-      }, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${uvdeskToken}`
-        },
+      // If configured for UVDesk specifically, format payload to match UVDesk's common ticket API shape.
+      // Note: UVDesk deployments may vary; adjust fields below to match your instance's API if needed.
+      let payload;
+      let headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${uvdeskToken}`,
+        'Accept': 'application/json'
+      };
+
+      if (uvdeskProvider === 'uvdesk') {
+        // Common UVDesk ticket creation payload (adjust if your instance requires different names)
+        payload = {
+          subject: subject,
+          customer: {
+            email: email
+          },
+          threads: [
+            {
+              type: 'message',
+              body: message,
+              sender: email
+            }
+          ],
+          // optional defaults
+          priority: 1,
+          status: 2
+        };
+      } else {
+        // Generic forwarding JSON (legacy/default)
+        payload = { email, subject, message, source: 'matrixaccel_pro' };
+      }
+
+      const resp = await axios.post(uvdeskUrl, payload, {
+        headers,
         timeout: 15000
       });
 

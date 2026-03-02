@@ -26,6 +26,7 @@ const Navbar: React.FC<NavbarProps> = ({
 
   const navLinks = [
     { id: 'home', label: 'Home' },
+    { id: 'support', label: 'Support' },
     { id: 'pricing', label: 'Pricing', icon: DollarSign },
     { id: 'docs', label: 'API Docs', icon: BookOpen },
     ...(isLoggedIn ? [

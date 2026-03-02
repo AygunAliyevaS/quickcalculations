@@ -10,6 +10,7 @@ import AuthModal from './matrix/AuthModal';
 import Dashboard from './matrix/Dashboard';
 import Playground from './matrix/Playground';
 import ApiDocs from './matrix/ApiDocs';
+import Support from './matrix/Support';
 
 interface UserData {
   id: string;
@@ -235,6 +236,14 @@ const AppLayout: React.FC = () => {
       {currentPage === 'docs' && (
         <>
           <ApiDocs />
+          <Footer onNavigate={setCurrentPage} />
+        </>
+      )}
+
+      {/* Support Page */}
+      {currentPage === 'support' && (
+        <>
+          <Support />
           <Footer onNavigate={setCurrentPage} />
         </>
       )}

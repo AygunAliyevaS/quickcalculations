@@ -23,6 +23,7 @@ const Footer: React.FC<FooterProps> = ({ onNavigate }) => {
       links: [
         { label: 'Features', page: 'home' },
         { label: 'Pricing', page: 'pricing' },
+        { label: 'Support', page: 'support' },
         { label: 'API Docs', page: 'docs' },
         { label: 'Playground', page: 'playground' },
         { label: 'Changelog', page: 'home' },

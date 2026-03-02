@@ -59,6 +59,12 @@ jobs:
             --resource-group "$AZURE_RESOURCE_GROUP" \
             --name "$AZURE_WEBAPP_NAME" \
             --settings SCM_DO_BUILD_DURING_DEPLOYMENT=false WEBSITE_RUN_FROM_PACKAGE=0
+          az resource update \
+            --resource-group "$AZURE_RESOURCE_GROUP" \
+            --resource-type Microsoft.Web/sites \
+            --name "$AZURE_WEBAPP_NAME" \
+            --set properties.siteConfig.defaultDocuments="['index.html']" \
+            -o none
 
       - name: 'Deploy to Azure WebApp (zip package)'
         run: |

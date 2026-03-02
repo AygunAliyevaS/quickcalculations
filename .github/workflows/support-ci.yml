@@ -1,0 +1,55 @@
+name: Support Integration CI
+
+on:
+  push:
+    paths:
+      - 'server/**'
+      - '.github/workflows/support-ci.yml'
+  pull_request:
+    paths:
+      - 'server/**'
+      - '.github/workflows/support-ci.yml'
+
+jobs:
+  server-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install server dependencies
+        working-directory: server
+        run: npm ci
+
+      - name: Start support server
+        run: |
+          nohup node server/index.js > server.log 2>&1 &
+          echo $! > server.pid
+
+      - name: Wait for health endpoint
+        run: npx wait-on http://localhost:3001/api/health --timeout 20000
+
+      - name: Run integration test - create ticket
+        run: |
+          set -eux
+          STATUS=$(curl -s -o /tmp/resp.json -w "%{http_code}" -X POST http://localhost:3001/api/support -H "Content-Type: application/json" -d '{"email":"ci@test.example","subject":"CI Test","message":"This is a test from CI"}')
+          echo "Status: $STATUS"
+          if [ "$STATUS" != "200" ]; then cat /tmp/resp.json; exit 1; fi
+          cat /tmp/resp.json
+
+      - name: Verify ticket stored locally
+        run: |
+          if [ ! -f server/tickets.json ]; then echo "tickets.json not found"; cat server.log || true; exit 1; fi
+          grep -q "ci@test.example" server/tickets.json || (echo "Ticket not saved"; cat server/tickets.json; exit 1)
+
+      - name: Upload server logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-logs
+          path: server.log

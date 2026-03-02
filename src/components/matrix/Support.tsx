@@ -6,10 +6,27 @@ const Support: React.FC = () => {
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const mailto = `mailto:privacy@matrixaccel.pro?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(`From: ${email}\n\n${message}`)}`;
-    window.location.href = mailto;
+    setSubmitting(true);
+    try {
+      const resp = await fetch('/api/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, subject, message }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data && data.error ? data.error : 'Request failed');
+      alert('Support request submitted. We will contact you soon.');
+      setEmail(''); setSubject(''); setMessage('');
+    } catch (err) {
+      console.error(err);
+      alert('Failed to submit request. Please try again or email support@matrixaccel.pro');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
